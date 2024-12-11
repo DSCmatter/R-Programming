@@ -1,3 +1,17 @@
+mydata <- read.csv(file.choose())
+
+install.packages("ggplot2")
+
+library(ggplot2)
+
+ggplot(data = mydata, mapping = aes(x = clarity, y = price))
+
+ggplot(data = mydata, mapping = aes(x = clarity, y = price)) + geom_point()
+
+ggplot(data = mydata, mapping = aes(x = carat, y = price)) + geom_point()
+
+ggplot(data = mydata, mapping = aes(x = carat, y = price, color = clarity)) + geom_point()
+
 # normal dist 
 # rnorm(10)
 
