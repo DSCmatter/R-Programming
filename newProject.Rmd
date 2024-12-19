@@ -1,0 +1,268 @@
+---
+title: "Analysis of Steam Games Dataset"
+author: "Vasant Kumar Mogia"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+## About this Dataset
+
+The dataset **All Steam Spiele und deren Metadaten** is a comprehensive collection of data encompassing all games available on the Steam platform, along with their corresponding metadata. It serves as a valuable resource for researchers, developers, and gaming enthusiasts interested in exploring and analyzing the vast Steam gaming ecosystem.
+
+### Motivations for Using the Steam Games Dataset
+
+the Steam Games Dataset provides valuable insights into gaming trends, consumer sentiment, and game performance. It helps analyze factors like game popularity, pricing, reviews, and features, enabling better predictions, game development, and targeted marketing strategies. This dataset is essential for understanding the gaming market and improving decision-making within the industry.
+
+### Key Features
+
+This dataset includes the following information for each game:
+
+-   Title
+-   Release date
+-   Developer and publisher details
+-   Original.Price & Discounted Price 
+-   All.Reviews.Summary
+-   Popular.Tags
+-   Supported languages
+-   Minimum.Requirements and more!
+
+### Acknowledgment
+
+Special thanks to the owner of [this GitHub repository](https://github.com/FronkonGames/Steam-Games-Scraper) for compiling and sharing the original dataset.
+
+### Objectives
+
+This analysis aims to:
+
+1.  Explore and visualize trends in game genres, ratings, and more.
+2.  Identify key factors that influence game market.
+3.  Examine the evolution of game releases over time.
+
+### Basic Dataset Overview
+
+```{r echo=TRUE}
+
+# Load the dataset
+steam_data <- read.csv('archive/dataset.csv')
+
+# Take only the first 10,000 rows
+steam_data_subset <- head(steam_data, 10000)
+
+# Check the summary of the subset
+summary(steam_data_subset)
+
+# View column names
+colnames(steam_data_subset)
+
+
+```
+
+### Load packages
+
+```{r}
+# Load all necessary libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(summarytools)
+library(plotly)
+
+```
+
+### Preprocessing:
+Handle missing values and incorrect data entries.
+
+```{r echo=TRUE}
+steam_data_clean <- steam_data_subset %>%
+  drop_na() %>%
+  distinct() %>%
+  mutate(
+    Release.Date = ymd(Release.Date)
+  ) %>%
+  mutate(
+    ReleaseYear = year(Release.Date)
+  ) %>%
+  filter(`Discounted.Price` > 0)
+
+summary(steam_data_clean)
+colnames(steam_data_clean)
+
+
+```
+
+### Descriptive Analysis:
+
+```{r} 
+
+summary(steam_data_clean)
+```
+
+### Most Common Developers and Publishers
+
+```{r}
+
+# Top 10 developers
+top_developers <- sort(table(steam_data_subset$Developer), decreasing=TRUE)[2:8]
+barplot(top_developers, main="Most Common Developers", col="lightcoral", las=2, cex.names=0.5)
+
+# Top 10 publishers
+top_publishers <- sort(table(steam_data_subset$Publisher), decreasing=TRUE)[2:8]
+barplot(top_publishers, main="Most Common Publishers", col="lightblue", las=2, cex.names=0.5)
+
+```
+
+### Popular Tags and Game Features
+
+```{r}
+# Most popular tags 
+popular_tags <- unlist(strsplit(as.character(steam_data_subset$Popular.Tags), ","))
+
+popular_tag_table <- table(popular_tags)
+
+top_10_tags <- head(sort(popular_tag_table, decreasing = TRUE), 10)
+
+top_10_tags
+
+library(ggplot2)
+
+# Prepare the top 10 most popular tags
+top_10_tags_df <- data.frame(Tag = names(top_10_tags), Count = as.numeric(top_10_tags))
+
+# Bar plot for top 10 most popular tags
+ggplot(top_10_tags_df, aes(x = reorder(Tag, Count), y = Count, fill = Tag)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(title = "Top 10 Most Popular Tags", x = "Tag", y = "Count") +
+  coord_flip() +  
+  scale_fill_brewer(palette = "Set3") +
+  theme_minimal()
+
+# Most popular game features
+game_features <- unlist(strsplit(as.character(steam_data_subset$Game.Features), ","))
+
+game_feature_table <- table(game_features)
+
+top_10_features <- head(sort(game_feature_table, decreasing = TRUE), 10)
+
+top_10_features
+
+# Prepare the top 10 most popular game features
+top_10_features_df <- data.frame(Feature = names(top_10_features), Count = as.numeric(top_10_features))
+
+# Bar plot for top 10 most popular game features
+ggplot(top_10_features_df, aes(x = reorder(Feature, Count), y = Count, fill = Feature)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(title = "Top 10 Most Popular Game Features", x = "Game Feature", y = "Count") +
+  coord_flip() +  
+  scale_fill_brewer(palette = "Set3") +
+  theme_minimal()
+
+```
+
+### Release Date Analysis
+
+```{r} 
+
+library(ggplot2)
+library(lubridate)
+
+steam_data_subset %>%
+  mutate(
+    Release.Date = mdy(Release.Date),  
+    ReleaseYear = year(Release.Date)  
+  ) %>%
+  ggplot(aes(x = ReleaseYear)) +
+  geom_bar(fill = "steelblue") +
+  labs(
+    title = "Number of Games Released Each Year",
+    x = "Release Year",
+    y = "Number of Games"
+  ) +
+  theme_minimal()
+
+```
+
+### Games with Highest Reviews
+
+```{r}
+overwhelmingly_positive_games <- subset(steam_data_subset, All.Reviews.Summary == "Overwhelmingly Positive")
+
+library(dplyr)
+
+selected_columns <- overwhelmingly_positive_games %>%
+  select(Title, Original.Price, Discounted.Price, Release.Date, Recent.Reviews.Summary)
+
+head(selected_columns, 10)
+
+library(ggplot2)
+
+```
+
+### Games with Most Supported Languages
+
+```{r}
+languages <- unlist(strsplit(steam_data_subset$Supported.Languages, ","))
+
+languages <- trimws(languages)
+
+language_counts <- table(languages)
+
+sorted_languages <- sort(language_counts, decreasing = TRUE)
+
+head(sorted_languages, 10)
+
+library(ggplot2)
+
+language_df <- data.frame(Language = names(sorted_languages), Count = as.integer(sorted_languages))
+
+ggplot(language_df[1:10, ], aes(x = reorder(Language, -Count), y = Count)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  xlab("Language") +
+  ylab("Count") +
+  ggtitle("Top 10 Most Supported Languages in Steam Games") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Games with Most asked Minimum.Requirements 
+
+```{r}
+min_requirements <- unlist(strsplit(as.character(steam_data_subset$Minimum.Requirements), "[,\\s]+"))
+
+min_requirements <- trimws(min_requirements)
+
+min_requirements_table <- table(min_requirements)
+
+top_min_requirements <- head(sort(min_requirements_table, decreasing = TRUE), 10)
+
+top_min_requirements
+```
+
+### Review analysis 
+
+``` {r}
+unique_review_categories <- unique(steam_data_subset$All.Reviews.Summary)
+print(unique_review_categories)
+
+library(ggplot2)
+
+steam_data_filtered <- steam_data_subset[steam_data_subset$All.Reviews.Summary != "", ]
+
+review_counts <- as.data.frame(table(steam_data_filtered$All.Reviews.Summary))
+colnames(review_counts) <- c("ReviewCategory", "Count")
+
+# Create a pie chart using ggplot2
+ggplot(review_counts, aes(x = "", y = Count, fill = ReviewCategory)) +
+  geom_bar(stat = "identity", color = "black", width = 1) +  
+  coord_polar(theta = "y") + 
+  labs(title = "Review Summary Distribution") +
+  scale_fill_brewer(palette = "Set3") +  
+  theme_void() +  
+  theme(legend.title = element_blank()) 
+
+
+```
